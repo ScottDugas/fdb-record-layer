@@ -7,6 +7,56 @@ As the [versioning guide](Versioning.md) details, it cannot always be determined
 
 ## 4.1
 
+### 4.1.6.0
+
+<h4> New Features </h4>
+
+* Add support for prepared statements in JDBC by [@ohadzeliger](https://github.com/ohadzeliger) in [PR #3116](https://github.com/FoundationDB/fdb-record-layer/pull/3116)
+* Resolves #1288: Automatically publish to maven central by [@alecgrieser](https://github.com/alecgrieser) in [PR #3144](https://github.com/FoundationDB/fdb-record-layer/pull/3144)
+* Resolve #3135: Allow scrubbing of indexes in READABLE_UNIQUE_PENDING state by [@jjezra](https://github.com/jjezra) in [PR #3137](https://github.com/FoundationDB/fdb-record-layer/pull/3137)
+* Resolve #3008: Support Lucene index scrubbing by [@jjezra](https://github.com/jjezra) in [PR #3009](https://github.com/FoundationDB/fdb-record-layer/pull/3009)
+* Resolves #3073: Add enum column support to relational server by [@ScottDugas](https://github.com/ScottDugas) in [PR #3074](https://github.com/FoundationDB/fdb-record-layer/pull/3074)
+* Add validation to Insert statement parsing to match the column names with supplied values by [@g31pranjal](https://github.com/g31pranjal) in [PR #3070](https://github.com/FoundationDB/fdb-record-layer/pull/3070)
+<h4> Bug Fixes </h4>
+
+* Fixes #3139: Plan Hash Instability in recursive union query by [@alecgrieser](https://github.com/alecgrieser) in [PR #3142](https://github.com/FoundationDB/fdb-record-layer/pull/3142)
+* restore showPlannerExpression by [@normen662](https://github.com/normen662) in [PR #3134](https://github.com/FoundationDB/fdb-record-layer/pull/3134)
+<h4> Dependency Updates </h4>
+
+* Update dependencies by [@arnaud-lacurie](https://github.com/arnaud-lacurie) in [PR #3115](https://github.com/FoundationDB/fdb-record-layer/pull/3115)
+* Bump spotbugs gradle plugin from 4.6.1 to 6.1.3 by [@ScottDugas](https://github.com/ScottDugas) in [PR #3104](https://github.com/FoundationDB/fdb-record-layer/pull/3104)
+
+<details>
+<summary>
+
+<h4> Build/Test/Documentation Improvements </h4> (click to expand)
+
+</summary>
+
+* Commit automatic updates from 4.1.6.0 by [@alecgrieser](https://github.com/alecgrieser) in [PR #3163](https://github.com/FoundationDB/fdb-record-layer/pull/3163)
+* Fixes signing configuration location by [@alecgrieser](https://github.com/alecgrieser) in [PR #3159](https://github.com/FoundationDB/fdb-record-layer/pull/3159)
+* Another try at getting pull-request number through from a forked PR. by [@MMcM](https://github.com/MMcM) in [PR #3158](https://github.com/FoundationDB/fdb-record-layer/pull/3158)
+* Don't include empty :destructiveTest in Test Summary by [@ScottDugas](https://github.com/ScottDugas) in [PR #3148](https://github.com/FoundationDB/fdb-record-layer/pull/3148)
+* Publish a consolidated JaCoCo report from multiple subprojects and split test jobs by [@MMcM](https://github.com/MMcM) in [PR #3147](https://github.com/FoundationDB/fdb-record-layer/pull/3147)
+* Support multiple server versions in multi-version tests by [@ohadzeliger](https://github.com/ohadzeliger) in [PR #3138](https://github.com/FoundationDB/fdb-record-layer/pull/3138)
+* Fix broken build in Main by [@ohadzeliger](https://github.com/ohadzeliger) in [PR #3143](https://github.com/FoundationDB/fdb-record-layer/pull/3143)
+* Initial attempt at automatic GitHub release notes by [@ScottDugas](https://github.com/ScottDugas) in [PR #3136](https://github.com/FoundationDB/fdb-record-layer/pull/3136)
+* Change context options to a type-safe option with generics. by [@ohadzeliger](https://github.com/ohadzeliger) in [PR #3132](https://github.com/FoundationDB/fdb-record-layer/pull/3132)
+* Remove caching settings when downloading old server by [@ScottDugas](https://github.com/ScottDugas) in [PR #3141](https://github.com/FoundationDB/fdb-record-layer/pull/3141)
+* Remove test-summary action from the nightly workflow by [@ScottDugas](https://github.com/ScottDugas) in [PR #3140](https://github.com/FoundationDB/fdb-record-layer/pull/3140)
+* Split out the PR coverage commenting workflow … by [@MMcM](https://github.com/MMcM) in [PR #3120](https://github.com/FoundationDB/fdb-record-layer/pull/3120)
+* Split PRB into three jobs that can run in parallel by [@alecgrieser](https://github.com/alecgrieser) in [PR #3122](https://github.com/FoundationDB/fdb-record-layer/pull/3122)
+* Use fixed SHA for create-pull-request action by [@alecgrieser](https://github.com/alecgrieser) in [PR #3127](https://github.com/FoundationDB/fdb-record-layer/pull/3127)
+* Replace test-summary action with custom action code by [@ScottDugas](https://github.com/ScottDugas) in [PR #3119](https://github.com/FoundationDB/fdb-record-layer/pull/3119)
+
+</details>
+
+
+**[Full Changelog](https://github.com/FoundationDB/fdb-record-layer/compare/4.1.4.0...4.1.6.0)**
+
+<!-- MIXED_MODE_RESULTS 4.1.6.0 PLACEHOLDER -->
+
+
 ### 4.1.4.0
 
 <h4> New Features </h4>
