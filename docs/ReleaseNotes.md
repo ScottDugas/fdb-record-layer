@@ -215,6 +215,65 @@ Our API stability annotations have been updated to reflect greater API instabili
 <!-- MIXED_MODE_RESULTS 4.0.561.0 PLACEHOLDER -->
 
 
+### 4.0.559.6
+
+<h4> New Features </h4>
+
+* Backport prepared statement changes to the patch release by [@ohadzeliger](https://github.com/ohadzeliger) in [PR #3157](https://github.com/FoundationDB/fdb-record-layer/pull/3157)
+
+
+**[Full Changelog](https://github.com/FoundationDB/fdb-record-layer/compare/4.0.559.4...4.0.559.6)**
+
+<!-- MIXED_MODE_RESULTS 4.0.559.6 PLACEHOLDER -->
+
+
+### 4.0.559.4
+
+<h4> Bug Fixes </h4>
+
+* preparing for up-level DEFAULTS_ON_EMPTY changes by [@normen662](https://github.com/normen662) in [PR #3108](https://github.com/FoundationDB/fdb-record-layer/pull/3108)
+
+<details>
+<summary>
+
+<h4> Build/Test/Documentation Improvements </h4> (click to expand)
+
+</summary>
+
+* Backport PRB to 4.0.559 branch by [@alecgrieser](https://github.com/alecgrieser) in [PR #3109](https://github.com/FoundationDB/fdb-record-layer/pull/3109)
+
+</details>
+
+
+**[Full Changelog](https://github.com/FoundationDB/fdb-record-layer/compare/4.0.559.3...4.0.559.4)**
+
+<!-- MIXED_MODE_RESULTS 4.0.559.4 PLACEHOLDER -->
+
+
+### 4.0.559.3
+
+<h4> Bug Fixes </h4>
+
+* Break out a helper class from GenerateVisitor annotation processor. (backport #3060) by [@MMcM](https://github.com/MMcM) in [PR #3062](https://github.com/FoundationDB/fdb-record-layer/pull/3062)
+
+
+**[Full Changelog](https://github.com/FoundationDB/fdb-record-layer/compare/4.0.559.1...4.0.559.3)**
+
+<!-- MIXED_MODE_RESULTS 4.0.559.3 PLACEHOLDER -->
+
+
+### 4.0.559.1
+
+<h4> New Features </h4>
+
+* 4.0.559 release branch by [@ohadzeliger](https://github.com/ohadzeliger) in [PR #3058](https://github.com/FoundationDB/fdb-record-layer/pull/3058)
+
+
+**[Full Changelog](https://github.com/FoundationDB/fdb-record-layer/compare/4.0.559.0...4.0.559.1)**
+
+<!-- MIXED_MODE_RESULTS 4.0.559.1 PLACEHOLDER -->
+
+
 ### 4.0.559.0
 
 * **Feature** Add tests for Lucene "all-match" scan [(Issue #2991)](https://github.com/FoundationDB/fdb-record-layer/issues/2991)
