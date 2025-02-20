@@ -7,6 +7,38 @@ As the [versioning guide](Versioning.md) details, it cannot always be determined
 
 ## 4.1
 
+### 4.1.8.0
+
+<h4> New Features </h4>
+
+* FRL respects PLAN_CACHE_*_MAX_ENTRIES - [PR #3156](https://github.com/FoundationDB/fdb-record-layer/pull/3156)
+<h4> Bug Fixes </h4>
+
+* Use `Locale.ROOT` in `String.format`, fixing messages if JVM has non-US default locale - [PR #3117](https://github.com/FoundationDB/fdb-record-layer/pull/3117)
+
+<details>
+<summary>
+
+<h4> Build/Test/Documentation Improvements (click to expand) </h4>
+
+</summary>
+
+* Run mixed mode tests in a workflow, and publish results to release notes - [PR #3166](https://github.com/FoundationDB/fdb-record-layer/pull/3166)
+* Add support for running YAML tests against a server built from local branch - [PR #3161](https://github.com/FoundationDB/fdb-record-layer/pull/3161)
+* Kill abandoned external servers started during Yaml Tests - [PR #3152](https://github.com/FoundationDB/fdb-record-layer/pull/3152)
+* Commit automatic updates from 4.1.6.0 - [PR #3163](https://github.com/FoundationDB/fdb-record-layer/pull/3163)
+* Fix typo in action output reference - [PR #3165](https://github.com/FoundationDB/fdb-record-layer/pull/3165)
+* Do not try to add coverage comment in pull request itself - [PR #3162](https://github.com/FoundationDB/fdb-record-layer/pull/3162)
+* Restrict repository of nightly workflow, to avoid running it on forks - [PR #3160](https://github.com/FoundationDB/fdb-record-layer/pull/3160)
+
+</details>
+
+
+**[Full Changelog (4.1.6.0...4.1.8.0)](https://github.com/FoundationDB/fdb-record-layer/compare/4.1.6.0...4.1.8.0)**
+
+<!-- MIXED_MODE_RESULTS 4.1.8.0 PLACEHOLDER -->
+
+
 ### 4.1.6.0
 
 <h4> New Features </h4>
