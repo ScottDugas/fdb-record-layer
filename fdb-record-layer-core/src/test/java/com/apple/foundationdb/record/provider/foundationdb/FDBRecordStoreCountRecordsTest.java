@@ -842,7 +842,9 @@ public class FDBRecordStoreCountRecordsTest extends FDBRecordStoreTestBase {
     }
 
     @ParameterizedTest
-    @EnumSource(RecordMetaDataProto.DataStoreInfo.RecordCountState.class)
+    @EnumSource(value = RecordMetaDataProto.DataStoreInfo.RecordCountState.class,
+            names = "UNSPECIFIED",
+            mode = EnumSource.Mode.EXCLUDE)
     @SuppressWarnings("deprecation")
     void deleteWhereSuccessfully(RecordMetaDataProto.DataStoreInfo.RecordCountState newState) {
         // deleteWhere should work regardless of the state
@@ -890,6 +892,8 @@ public class FDBRecordStoreCountRecordsTest extends FDBRecordStoreTestBase {
         }
     }
 
+    // TODO test that setting it to UNSPECIFIED errors
+    // TODO test that a future version errors
     @ParameterizedTest
     @EnumSource(RecordMetaDataProto.DataStoreInfo.RecordCountState.class)
     @SuppressWarnings("deprecation")
@@ -945,7 +949,9 @@ public class FDBRecordStoreCountRecordsTest extends FDBRecordStoreTestBase {
     }
 
     @ParameterizedTest
-    @EnumSource(RecordMetaDataProto.DataStoreInfo.RecordCountState.class)
+    @EnumSource(value = RecordMetaDataProto.DataStoreInfo.RecordCountState.class,
+            names = "UNSPECIFIED",
+            mode = EnumSource.Mode.EXCLUDE)
     void rebuildRecordCountDuringCheckVersion(RecordMetaDataProto.DataStoreInfo.RecordCountState newState) {
         // If the RecordCount is disabled it should not be rebuilt during checkVersion, otherwise it should
         final RecordMetaDataBuilder builder;

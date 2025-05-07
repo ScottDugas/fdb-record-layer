@@ -99,6 +99,8 @@ message DataStoreInfo {
   // The state of the RecordCount as defined by record_count_key. This is similar to IndexState, but since there is no
   // mechanism for building the RecordCount across multiple transactions, the state transitions are slightly different.
   enum RecordCountState {
+    // The State has not been set, or may be an unrecognized value
+    UNSPECIFIED = 0;
     // The RecordCountKey is maintained and usable for FDBRecordStore.getSnapshotRecordCount
     READABLE = 1;
     // The RecordCount as defined by record_count_key is maintained, but not queryable

@@ -2531,8 +2531,7 @@ public class FDBRecordStore extends FDBStoreBase implements FDBRecordStoreBase<M
                         .addLogInfo(subspaceProvider.logKey(), subspaceProvider.toString(context));
             }
         }
-        checkStoreHeaderInternal(info, getContext(), getSubspaceProvider(), existenceCheck);
-        return info;
+        return checkStoreHeaderInternal(info, getContext(), getSubspaceProvider(), existenceCheck);
     }
 
     @API(API.Status.INTERNAL)
@@ -2642,10 +2641,10 @@ public class FDBRecordStore extends FDBStoreBase implements FDBRecordStoreBase<M
     }
 
     @SuppressWarnings("PMD.CompareObjectsWithEquals")
-    private static void checkStoreHeaderInternal(@Nonnull RecordMetaDataProto.DataStoreInfo storeHeader,
-                                                 @Nonnull FDBRecordContext context,
-                                                 @Nonnull SubspaceProvider subspaceProvider,
-                                                 @Nonnull StoreExistenceCheck existenceCheck) {
+    private static RecordMetaDataProto.DataStoreInfo checkStoreHeaderInternal(@Nonnull RecordMetaDataProto.DataStoreInfo storeHeader,
+                                                                              @Nonnull FDBRecordContext context,
+                                                                              @Nonnull SubspaceProvider subspaceProvider,
+                                                                              @Nonnull StoreExistenceCheck existenceCheck) {
         if (storeHeader == RecordMetaDataProto.DataStoreInfo.getDefaultInstance()) {
             if (existenceCheck == StoreExistenceCheck.ERROR_IF_NOT_EXISTS) {
                 throw new RecordStoreDoesNotExistException("Record store does not exist",
@@ -2658,6 +2657,19 @@ public class FDBRecordStore extends FDBStoreBase implements FDBRecordStoreBase<M
         } else {
             FormatVersion.validateFormatVersion(storeHeader.getFormatVersion(), subspaceProvider);
         }
+        if (storeHeader.getRecordCountState() == RecordMetaDataProto.DataStoreInfo.RecordCountState.UNSPECIFIED) {
+            if (storeHeader.getUnknownFields().hasField(RecordMetaDataProto.DataStoreInfo.RECORD_COUNT_STATE_FIELD_NUMBER)) {
+                throw new RecordCoreStorageException("Unexpected RecordCountState")
+                        .addLogInfo(subspaceProvider.logKey(), subspaceProvider.toString(context))
+                        .addLogInfo(LogMessageKeys.ACTUAL,
+                                storeHeader.getUnknownFields()
+                                        .getField(RecordMetaDataProto.DataStoreInfo.RECORD_COUNT_STATE_FIELD_NUMBER));
+            } else {
+                return storeHeader.toBuilder().setRecordCountState(RecordMetaDataProto.DataStoreInfo.RecordCountState.READABLE)
+                        .build();
+            }
+        }
+        return storeHeader;
     }
 
     /**
@@ -3286,6 +3298,9 @@ public class FDBRecordStore extends FDBStoreBase implements FDBRecordStoreBase<M
      * @return a future once that completes once the state is updated, and the data is cleared.
      */
     public CompletableFuture<Void> updateRecordCountStateAsync(@Nonnull RecordMetaDataProto.DataStoreInfo.RecordCountState newState) {
+        if (newState.equals(RecordMetaDataProto.DataStoreInfo.RecordCountState.UNSPECIFIED)) {
+            throw new RecordCoreArgumentException("Cannot set RecordCountState to UNSPECIFIED");
+        }
         return updateStoreHeaderAsync(builder -> {
             if (!getFormatVersionEnum().isAtLeast(FormatVersion.RECORD_COUNT_STATE)) {
                 throw new RecordCoreException("Store does not support updating record count state")
