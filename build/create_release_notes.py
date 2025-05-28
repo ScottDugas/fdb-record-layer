@@ -76,6 +76,14 @@ class Version:
     def precise_version(self) -> str:
         return self.version
 
+class Commit:
+    def __init__(self, raw_log: str):
+        (self.hash, self.subject) = raw_log.split(' ', maxsplit=1)
+
+    def __eq__(self, __value: object) -> bool:
+        return isinstance(__value, Commit) and self.hash == __value.hash and self.subject == __value.subject
+
+
 def run(command: list[str]) -> str:
     ''' Run a command, returning its output
     If the command fails, the output will be dumped, and an exception thrown
@@ -89,15 +97,17 @@ def run(command: list[str]) -> str:
         print(e.stderr)
         raise Exception(f"Failed to run command ({e.returncode}): {e.cmd}")
 
-Commit = list[str] # Type hint
-
 def get_commits(old_version: str, new_version: str, skip_commits: list[str]) -> list[Commit]:
     '''Return a list of tuples for each commit between the two versions
     The tuples will be (hash, commit subject)
     '''
     raw_log = run(['git', 'log', '--pretty=%H %s', old_version + ".." + new_version])
-    commit_pairs = [commit.split(' ', maxsplit=1) for commit in raw_log.splitlines()]
-    return [commit for commit in commit_pairs if not commit[0] in skip_commits]
+    return parse_commits(raw_log, skip_commits)
+
+
+def parse_commits(raw_log: str, skip_commits: list[str]) -> list[Commit]:
+    commit_pairs = [Commit(commit) for commit in raw_log.splitlines()]
+    return [commit for commit in commit_pairs if not commit.hash in skip_commits]
 
 def get_pr(commit_hash: str, pr_cache: str, repository: str) -> list[dict]:
     '''Get the PRs associated with the given commit hash.
@@ -124,7 +134,7 @@ def get_prs(commits: list[Commit], pr_cache: str, repository: str) -> list[tuple
     Returns a list of tuple pairs, the first being the PR info, and the second
     being the commit.
     '''
-    return [(get_pr(commit[0], pr_cache, repository), commit) for commit in commits]
+    return [(get_pr(commit.hash, pr_cache, repository), commit) for commit in commits]
 
 def dedup_prs(prs: list[tuple[list[dict], Commit]]) -> list[tuple[list[dict], Commit]]:
     ''' Remove any duplicate prs from the list based on urls.
@@ -160,7 +170,7 @@ def generate_note(prs: list[dict], commit: Commit, label_config: dict) -> list[t
     ''' Generate a release note for a single category, returning a pair of
     the category for the note, and the text as markdown '''
     if len(prs) == 0:
-        return [("Direct Commit", commit[1])]
+        return [("Direct Commit", commit.subject)]
     if len(prs) > 1:
         print("Too many PRs?")
     pr = prs[0]
@@ -401,6 +411,7 @@ class TestStringMethods(unittest.TestCase):
                 ]:
             with self.subTest(old=old_version, other_content=line):
                 self.assertFalse(Version(old_version).greater_than_minor_version_header(line))
+
     def test_minor_version(self) -> None:
         for (minor, full) in [
                 ("## 3.9", "3.9.10.0"),
@@ -409,6 +420,28 @@ class TestStringMethods(unittest.TestCase):
                 ]:
             with self.subTest(minor=minor, full=full):
                 self.assertEqual(minor, Version(full).minor_version_header())
+
+    def test_commit_init(self) -> None:
+        commit1 = Commit('ef983defba512699a3de004183736fc972d28701 Add some additional testing of existing behavior')
+        self.assertEqual('ef983defba512699a3de004183736fc972d28701', commit1.hash)
+        self.assertEqual('Add some additional testing of existing behavior', commit1.subject)
+        commit2 = Commit('68f805abea8b16ee461e95abde65dde53e4bd45d Create FutureManagerRunner and convert FDBDatabaseRunnerImpl to use it. (#3347)')
+        self.assertEqual('68f805abea8b16ee461e95abde65dde53e4bd45d', commit2.hash)
+        self.assertEqual('Create FutureManagerRunner and convert FDBDatabaseRunnerImpl to use it. (#3347)', commit2.subject)
+
+    def test_parse_commits(self) -> None:
+        lines = ['ef983defba512699a3de004183736fc972d28701 Add some additional testing of existing behavior',
+                 '68f805abea8b16ee461e95abde65dde53e4bd45d Create FutureManagerRunner and convert FDBDatabaseRunnerImpl to use it. (#3347)',
+                 'a3b55bfa40d3410964f5ed5697f31d1e15aab559 Implement Compilable SQL functions (#3307)']
+        self.assertEqual([Commit(lines[0]), Commit(lines[1]), Commit(lines[2])],
+                         parse_commits('\n'.join(lines), []))
+
+    def test_parse_commits_with_skip(self) -> None:
+        lines = ['ef983defba512699a3de004183736fc972d28701 Add some additional testing of existing behavior',
+                 '68f805abea8b16ee461e95abde65dde53e4bd45d Create FutureManagerRunner and convert FDBDatabaseRunnerImpl to use it. (#3347)',
+                 'a3b55bfa40d3410964f5ed5697f31d1e15aab559 Implement Compilable SQL functions (#3307)']
+        self.assertEqual([Commit(lines[1]), Commit(lines[2])],
+                         parse_commits('\n'.join(lines), ['ef983defba512699a3de004183736fc972d28701']))
 
     @staticmethod
     def simple_label_config() -> dict:
@@ -436,7 +469,7 @@ class TestStringMethods(unittest.TestCase):
             'title': 'I made some changes',
             'number': 3342,
             'labels': []
-        }], ['320498'], self.simple_label_config()))
+        }], Commit('320498 subj'), self.simple_label_config()))
 
     def test_generate_note_enhancement(self) -> None:
         html_url = "https://github.com/FoundationDB/fdb-record-layer/pull/3342"
@@ -445,7 +478,7 @@ class TestStringMethods(unittest.TestCase):
             'title': 'I made some changes',
             'number': 3342,
             'labels': [{'name': 'enhancement'}]
-        }], ['320498'], self.complex_label_config()))
+        }], Commit('320498 subject'), self.complex_label_config()))
 
     def test_generate_all_notes(self) -> None:
         breaking_change = {
@@ -475,7 +508,8 @@ class TestStringMethods(unittest.TestCase):
         """),
 
                          generate_all_notes(self.complex_label_config(),
-                                            [([breaking_change], ['commit0']), ([enhancement], ['commit1'])],
+                                            [([breaking_change], Commit('234 subj0')),
+                                             ([enhancement], Commit('432 subj1'))],
                                             '4.3.2.0', Version('4.3.3.0'),
                                             'FoundationDB/fdb-record-layer',
                                             'Mixed Mode Results'))
