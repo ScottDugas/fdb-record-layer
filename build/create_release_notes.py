@@ -22,6 +22,7 @@
 
 
 import argparse
+import textwrap
 from collections import defaultdict
 import json
 import re
@@ -155,18 +156,18 @@ def get_category(pr: dict, label_config: dict, commit: Commit) -> str:
     print(f"No label: {pr['html_url']} {str(label_names)} {str(commit)}")
     return label_config['catch_all']
 
-def generate_note(prs: list[dict], commit: Commit, label_config: dict) -> tuple[str, str]:
+def generate_note(prs: list[dict], commit: Commit, label_config: dict) -> list[tuple[str, str]]:
     ''' Generate a release note for a single category, returning a pair of
     the category for the note, and the text as markdown '''
     if len(prs) == 0:
-        return "Direct Commit", commit[1]
+        return [("Direct Commit", commit[1])]
     if len(prs) > 1:
         print("Too many PRs?")
     pr = prs[0]
     category = get_category(pr, label_config, commit)
     text = f'* {pr["title"]} - ' + \
         f'[PR #{pr["number"]}]({pr["html_url"]})'
-    return category, text
+    return [(category, text)]
 
 def format_notes(notes: list[tuple[str, str]], label_config: dict,
                  old_version: str, new_version: str, repository: str, mixed_mode_results: str) -> str:
@@ -194,6 +195,15 @@ def format_notes(notes: list[tuple[str, str]], label_config: dict,
     if mixed_mode_results is not None:
         text += f"\n\n{mixed_mode_results}\n"
     return text
+
+def generate_all_notes(label_config: dict,
+                       prs: list[tuple[list[dict], Commit]],
+                       old_version: str,
+                       version: Version,
+                       repository: str,
+                       mixed_mode_results: str):
+    new_notes: list[tuple[str, str]] = [note for pr in prs for note in generate_note(pr[0], pr[1], label_config)]
+    return format_notes(new_notes, label_config, old_version, version.precise_version(), repository, mixed_mode_results)
 
 def replace_note(lines: list[str], version, note: str) -> list[str]:
     ''' Insert the given formatted release notes in to ReleaseNotes.md
@@ -275,8 +285,7 @@ def main(argv: list[str]):
     commits = get_commits(old_version, version.precise_version(), args.skip_commit)
     prs = get_prs(commits, args.pr_cache, args.repository)
     prs = dedup_prs(prs)
-    new_notes: list[tuple[str, str]] = [generate_note(pr[0], pr[1], label_config) for pr in prs]
-    note = format_notes(new_notes, label_config, old_version, version.precise_version(), args.repository, mixed_mode_results)
+    note = generate_all_notes(label_config, prs, old_version, version, args.repository, mixed_mode_results)
     replace_notes(old_release_notes, args.release_notes_md, version, note)
     if args.commit:
         commit_release_notes(args.release_notes_md, version.precise_version())
@@ -405,8 +414,68 @@ class TestStringMethods(unittest.TestCase):
     def simple_label_config() -> dict:
         return {'categories': [], 'catch_all': 'Other'}
 
+    @staticmethod
+    def complex_label_config() -> dict:
+        return {"categories": [
+            {"title": "Breaking Changes",
+             "labels": ["breaking change"]},
+            {"title": "New Features",
+             "labels": ["enhancement"]}],
+            "catch_all": "Other Changes"}
+
     def test_format_empty_notes(self) -> None:
         self.assertEqual('\n\n**[Full Changelog (4.1.8.0...4.2.1.0)](https://github.com/FoundationDB/fdb-record-layer/compare/4.1.8.0...4.2.1.0)**\n\n' +
                          'Mixed Mode Results\n',
                          format_notes([], self.simple_label_config(), '4.1.8.0', '4.2.1.0',
                                       'FoundationDB/fdb-record-layer', 'Mixed Mode Results'))
+
+    def test_generate_note_catch_all(self) -> None:
+        html_url = "https://github.com/FoundationDB/fdb-record-layer/pull/3342"
+        self.assertEqual([('Other', '* I made some changes - [PR #3342](' + html_url + ')')], generate_note([{
+            'html_url': html_url,
+            'title': 'I made some changes',
+            'number': 3342,
+            'labels': []
+        }], ['320498'], self.simple_label_config()))
+
+    def test_generate_note_enhancement(self) -> None:
+        html_url = "https://github.com/FoundationDB/fdb-record-layer/pull/3342"
+        self.assertEqual([('New Features', '* I made some changes - [PR #3342](' + html_url + ')')], generate_note([{
+            'html_url': html_url,
+            'title': 'I made some changes',
+            'number': 3342,
+            'labels': [{'name': 'enhancement'}]
+        }], ['320498'], self.complex_label_config()))
+
+    def test_generate_all_notes(self) -> None:
+        breaking_change = {
+            'html_url': "https://github.com/FoundationDB/fdb-record-layer/pull/4321",
+            'title': 'I broke things',
+            'number': 4321,
+            'labels': [{'name': 'breaking change'}]
+        }
+        enhancement = {
+            'html_url': "https://github.com/FoundationDB/fdb-record-layer/pull/1234",
+            'title': 'I made some stuff',
+            'number': 1234,
+            'labels': [{'name': 'enhancement'}]
+        }
+
+        self.assertEqual(textwrap.dedent(f"""        <h4> Breaking Changes </h4>
+        
+        * I broke things - [PR #4321]({breaking_change['html_url']})
+        <h4> New Features </h4>
+        
+        * I made some stuff - [PR #1234]({enhancement['html_url']})
+        
+
+        **[Full Changelog (4.3.2.0...4.3.3.0)](https://github.com/FoundationDB/fdb-record-layer/compare/4.3.2.0...4.3.3.0)**
+
+        Mixed Mode Results
+        """),
+
+                         generate_all_notes(self.complex_label_config(),
+                                            [([breaking_change], ['commit0']), ([enhancement], ['commit1'])],
+                                            '4.3.2.0', Version('4.3.3.0'),
+                                            'FoundationDB/fdb-record-layer',
+                                            'Mixed Mode Results'))
