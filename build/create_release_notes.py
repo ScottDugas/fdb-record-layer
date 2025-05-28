@@ -174,10 +174,34 @@ def generate_note(prs: list[dict], commit: Commit, label_config: dict) -> list[t
     if len(prs) > 1:
         print("Too many PRs?")
     pr = prs[0]
-    category = get_category(pr, label_config, commit)
-    text = f'* {pr["title"]} - ' + \
-        f'[PR #{pr["number"]}]({pr["html_url"]})'
-    return [(category, text)]
+    body: str = pr['body']
+    title = None
+    notes = {}
+    for line in body.splitlines():
+        if line.startswith("## "):
+            heading = line.split(' ', maxsplit=1)[1].strip()
+            title = None
+            for category in label_config['categories']:
+                if heading == category['title']:
+                    title = heading
+        elif line.strip():
+            if title is not None:
+                if title in notes:
+                    notes[title] += line
+                else:
+                    notes[title] = line
+
+    label_names = [label['name'] for label in pr['labels']]
+    for category in label_config['categories']:
+        for label in category['labels']:
+            if label in label_names:
+                if category['title'] not in notes:
+                    notes[category['title']] = f'* {pr["title"]}'
+    if not notes:
+        print(f"No label: {pr['html_url']} {str(label_names)} {str(commit)}")
+        notes[label_config['catch_all']] = f'* {pr["title"]}'
+    suffix = f' - [PR #{pr["number"]}]({pr["html_url"]})'
+    return [(category, line.strip() + suffix) for (category, line) in notes.items()]
 
 def format_notes(notes: list[tuple[str, str]], label_config: dict,
                  old_version: str, new_version: str, repository: str, mixed_mode_results: str) -> str:
@@ -468,7 +492,8 @@ class TestStringMethods(unittest.TestCase):
             'html_url': html_url,
             'title': 'I made some changes',
             'number': 3342,
-            'labels': []
+            'labels': [],
+            'body': 'details of the change'
         }], Commit('320498 subj'), self.simple_label_config()))
 
     def test_generate_note_enhancement(self) -> None:
@@ -477,21 +502,49 @@ class TestStringMethods(unittest.TestCase):
             'html_url': html_url,
             'title': 'I made some changes',
             'number': 3342,
-            'labels': [{'name': 'enhancement'}]
+            'labels': [{'name': 'enhancement'}],
+            'body': 'details of the change'
         }], Commit('320498 subject'), self.complex_label_config()))
+
+    def test_generate_note_enhancement_without_breaking_note(self) -> None:
+        html_url = "https://github.com/FoundationDB/fdb-record-layer/pull/3342"
+        self.assertEqual([('Breaking changes', '* I made some changes - [PR #3342](' + html_url + ')')], generate_note([{
+            'html_url': html_url,
+            'title': 'I made some changes',
+            'number': 3342,
+            'labels': [{'name': 'enhancement'}, {'name': 'breaking change'}],
+            'body': 'details of the change'
+        }], Commit('320498 subject'), self.complex_label_config()))
+
+    def test_generate_note_with_breaking(self) -> None:
+        html_url = "https://github.com/FoundationDB/fdb-record-layer/pull/3342"
+        self.assertEqual(
+            [('Breaking Changes', '* FDBRecordStore.doSomething() has an additional whatever parameter ' +
+              '- [PR #3342](' + html_url + ')'),
+             ('New Features', '* I made some changes - [PR #3342](' + html_url + ')')],
+                          generate_note([{
+                          'html_url': html_url,
+                          'title': 'I made some changes',
+                          'number': 3342,
+                          'labels': [{'name': 'enhancement'}, {'name': 'breaking change'}],
+                          'body': 'I added some functionality\n' + \
+                              '## Breaking Changes\n\n* FDBRecordStore.doSomething() has an additional whatever parameter'
+                          }], Commit('320498 subject'), self.complex_label_config()))
 
     def test_generate_all_notes(self) -> None:
         breaking_change = {
             'html_url': "https://github.com/FoundationDB/fdb-record-layer/pull/4321",
             'title': 'I broke things',
             'number': 4321,
-            'labels': [{'name': 'breaking change'}]
+            'labels': [{'name': 'breaking change'}],
+            'body': 'details of the change'
         }
         enhancement = {
             'html_url': "https://github.com/FoundationDB/fdb-record-layer/pull/1234",
             'title': 'I made some stuff',
             'number': 1234,
-            'labels': [{'name': 'enhancement'}]
+            'labels': [{'name': 'enhancement'}],
+            'body': 'details of the change'
         }
 
         self.assertEqual(textwrap.dedent(f"""        <h4> Breaking Changes </h4>
