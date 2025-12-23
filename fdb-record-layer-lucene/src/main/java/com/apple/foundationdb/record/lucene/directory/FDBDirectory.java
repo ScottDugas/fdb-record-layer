@@ -1173,4 +1173,9 @@ public class FDBDirectory extends Directory  {
     public String getIndexOption(@Nonnull String key) {
         return indexOptions.get(key);
     }
+
+    @Nonnull
+    public Map<String, String> getIndexOptions() {
+        return indexOptions;
+    }
 }

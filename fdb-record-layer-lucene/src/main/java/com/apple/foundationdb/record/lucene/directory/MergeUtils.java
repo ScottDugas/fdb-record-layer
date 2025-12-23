@@ -59,7 +59,7 @@ class MergeUtils {
                                @Nonnull final MergeTrigger mergeTrigger,
                                @Nullable final MergePolicy.MergeSpecification merges,
                                @Nullable final Exception exceptionAtCreation) {
-        if (merges != null && logger.isDebugEnabled()) {
+        if (merges != null && logger.isInfoEnabled()) {
             final KeyValueLogMessage message = baseLogMessage(staticMessage, context, indexSubspace, key, mergeTrigger);
             message.addKeyAndValue(LuceneLogMessageKeys.MERGE_SOURCE, simpleSpec(merges));
             logWithExceptionIfNotAgile(logger, context, message);
@@ -79,16 +79,16 @@ class MergeUtils {
         if (!(context instanceof AgilityContext.Agile)) {
             final KeyValueLogMessage message = baseLogMessage(staticMessage, context, indexSubspace, key, mergeTrigger);
             message.addKeyAndValue(LuceneLogMessageKeys.MERGE_SOURCE, simpleSpec(merges));
-            logger.debug(message + " (Creation)", exceptionAtCreation);
+            logger.info(message + " (Creation)", exceptionAtCreation);
         }
     }
 
     @SuppressWarnings("PMD.GuardLogStatement") // method is only called in a guard for isDebugEnabled
     private static void logWithExceptionIfNotAgile(final @Nonnull Logger logger, final @Nonnull AgilityContext context, final KeyValueLogMessage message) {
         if (context instanceof AgilityContext.Agile) {
-            logger.debug(message.toString());
+            logger.info(message.toString());
         } else {
-            logger.debug(message.toString(), new Exception());
+            logger.info(message.toString(), new Exception());
         }
     }
 

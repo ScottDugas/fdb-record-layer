@@ -54,6 +54,7 @@ import com.apple.foundationdb.record.provider.foundationdb.properties.RecordLaye
 import com.apple.foundationdb.record.query.expressions.Query;
 import com.apple.foundationdb.record.test.TestKeySpace;
 import com.apple.foundationdb.record.util.RandomSecretUtil;
+import com.apple.foundationdb.record.util.pair.Pair;
 import com.apple.foundationdb.subspace.Subspace;
 import com.apple.foundationdb.tuple.Tuple;
 import com.apple.foundationdb.util.LoggableKeysAndValues;
@@ -1354,6 +1355,7 @@ public class LuceneIndexMaintenanceTest extends FDBRecordStoreConcurrentTestBase
 
     private static Stream<Arguments> concurrentMixParameters() {
         return ParameterizedTestUtils.cartesianProduct(
+                IntStream.range(0, 100).boxed(),
                 ParameterizedTestUtils.booleans("isSynthetic"),
                 Arrays.stream(PartitionCount.values()));
     }
@@ -1369,32 +1371,45 @@ public class LuceneIndexMaintenanceTest extends FDBRecordStoreConcurrentTestBase
      */
     @ParameterizedTest
     @MethodSource("concurrentMixParameters")
-    void concurrentMix(final boolean isSynthetic, final PartitionCount partitionCount) throws IOException {
+    void concurrentMix(int unused, final boolean isSynthetic, final PartitionCount partitionCount) throws IOException {
         // We never touch the same record twice.
         AtomicInteger step = new AtomicInteger(0);
         AtomicInteger updates = new AtomicInteger(0);
         AtomicInteger deletes = new AtomicInteger(0);
         AtomicInteger saves = new AtomicInteger(0);
-        concurrentTestWithinTransaction(isSynthetic, (dataModel, recordStore) ->
-                        RecordCursor.fromList(dataModel.recordsUnderTest())
-                                .mapPipelined(record -> {
-                                    switch (step.incrementAndGet() % 3) {
-                                        case 0:
-                                            updates.incrementAndGet();
-                                            return record.updateOtherValue(recordStore);
-                                        case 1:
-                                            deletes.incrementAndGet();
-                                            return record.deleteRecord(recordStore);
-                                        default:
-                                            saves.incrementAndGet();
-                                            return dataModel.saveRecordAsync(true, recordStore, 1)
-                                                    .thenAccept(vignore -> { });
-                                    }
-                                }, 10)
-                                .asList().join(),
-                (inserted, actual) -> assertEquals(inserted + saves.get() - deletes.get(), actual),
-                noopConsumer(),
-                partitionCount);
+        ConcurrentLinkedQueue<Pair<Tuple, Integer>> modified = new ConcurrentLinkedQueue<>();
+        try {
+            concurrentTestWithinTransaction(isSynthetic, (dataModel, recordStore) ->
+                            RecordCursor.fromList(dataModel.recordsUnderTest())
+                                    .mapPipelined(record -> {
+                                        switch (step.incrementAndGet() % 3) {
+                                            case 0:
+                                                modified.add(Pair.of(record.getPrimaryKey(), 0));
+                                                updates.incrementAndGet();
+                                                return record.updateOtherValue(recordStore);
+                                            case 1:
+                                                modified.add(Pair.of(record.getPrimaryKey(), 1));
+                                                deletes.incrementAndGet();
+                                                return record.deleteRecord(recordStore);
+                                            default:
+                                                modified.add(Pair.of(record.getPrimaryKey(), 2));
+                                                saves.incrementAndGet();
+                                                return dataModel.saveRecordAsync(true, recordStore, 1)
+                                                        .thenAccept(vignore -> {
+                                                        });
+                                        }
+                                    }, 10)
+                                    .asList().join(),
+                    (inserted, actual) -> assertEquals(inserted + saves.get() - deletes.get(), actual),
+                    noopConsumer(),
+                    partitionCount);
+        } catch (AssertionError e) {
+            Pair<Tuple, Integer> removed;
+            do {
+                removed =  modified.poll();
+                System.out.print(removed + ", ");
+            } while (removed != null);
+        }
     }
 
     private void concurrentTestWithinTransaction(boolean isSynthetic,

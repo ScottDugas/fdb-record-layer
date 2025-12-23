@@ -571,6 +571,8 @@ public class LuceneIndexTestDataModel {
         CompletableFuture<Void> deleteRecord(FDBRecordStore recordStore);
 
         Tuple getPartitioningKey();
+
+        Tuple getPrimaryKey();
     }
 
     private class ParentRecord implements RecordUnderTest {
@@ -613,6 +615,11 @@ public class LuceneIndexTestDataModel {
             recordsUnderTest.remove(primaryKey);
             return recordStore.deleteRecordAsync(primaryKey)
                     .thenAccept(wasDeleted -> assertTrue(wasDeleted, () -> primaryKey + " should have been deletable"));
+        }
+
+        @Override
+        public Tuple getPrimaryKey() {
+            return primaryKey;
         }
     }
 
@@ -666,6 +673,11 @@ public class LuceneIndexTestDataModel {
                     .thenAccept(wasDeleted -> assertTrue(wasDeleted, () -> parentPrimaryKey + " should have been deletable"))
                     .thenCompose(vignore -> recordStore.deleteRecordAsync(childPrimaryKey))
                     .thenAccept(wasDeleted -> assertTrue(wasDeleted, () -> childPrimaryKey + " should have been deletable"));
+        }
+
+        @Override
+        public Tuple getPrimaryKey() {
+            return syntheticPrimaryKey;
         }
     }
 }

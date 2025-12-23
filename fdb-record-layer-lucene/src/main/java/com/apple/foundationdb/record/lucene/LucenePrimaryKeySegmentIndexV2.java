@@ -153,7 +153,7 @@ public class LucenePrimaryKeySegmentIndexV2 implements LucenePrimaryKeySegmentIn
                         if (segmentInfo.name.equals(segmentName)) {
                             final int docid = (int)segdoc.getLong(1);
                             return new DocumentIndexEntry(primaryKey, kv.getKey(),
-                                    directoryReader.leaves().get(i).reader(), segmentName, docid);
+                                    directoryReader.leaves().get(i).reader(), segmentName, docid, directoryReader);
                         }
                     }
                     return null;

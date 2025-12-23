@@ -79,9 +79,11 @@ import org.apache.lucene.document.SortedDocValuesField;
 import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.HackLucene;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.NumericUtils;
@@ -92,11 +94,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -264,6 +268,10 @@ public class LuceneIndexMaintainer extends StandardIndexMaintainer {
         final long startTime = System.nanoTime();
         Document document = new Document();
         final IndexWriter newWriter = directoryManager.getIndexWriter(groupingKey, partitionId);
+        LOG.debug(KeyValueLogMessage.of("Inserting document",
+                LuceneLogMessageKeys.GROUP, groupingKey,
+                LuceneLogMessageKeys.INDEX_PARTITION, partitionId,
+                LuceneLogMessageKeys.PRIMARY_KEY, primaryKey));
 
         BytesRef ref = new BytesRef(keySerializer.asPackedByteArray(primaryKey));
         // use packed Tuple for the Stored and Sorted fields
@@ -306,7 +314,9 @@ public class LuceneIndexMaintainer extends StandardIndexMaintainer {
     int deleteDocument(Tuple groupingKey, Integer partitionId, Tuple primaryKey) throws IOException {
         final long startTime = System.nanoTime();
         final IndexWriter indexWriter = directoryManager.getIndexWriter(groupingKey, partitionId);
-        @Nullable final LucenePrimaryKeySegmentIndex segmentIndex = directoryManager.getDirectory(groupingKey, partitionId).getPrimaryKeySegmentIndex();
+        final SegmentInfos originalSegments = HackLucene.getSegmentInfo(indexWriter);
+        final FDBDirectory directory = directoryManager.getDirectory(groupingKey, partitionId);
+        @Nullable final LucenePrimaryKeySegmentIndex segmentIndex = directory.getPrimaryKeySegmentIndex();
 
         if (segmentIndex != null) {
             final LucenePrimaryKeySegmentIndex.DocumentIndexEntry documentIndexEntry = getDocumentIndexEntryWithRetry(segmentIndex, groupingKey, partitionId, primaryKey);
@@ -315,23 +325,44 @@ public class LuceneIndexMaintainer extends StandardIndexMaintainer {
                 long valid = indexWriter.tryDeleteDocument(documentIndexEntry.indexReader, documentIndexEntry.docId);
                 if (valid > 0) {
                     state.context.record(LuceneEvents.Events.LUCENE_DELETE_DOCUMENT_BY_PRIMARY_KEY, System.nanoTime() - startTime);
-                    return 1;
-                } else if (LOG.isDebugEnabled()) {
-                    LOG.debug(KeyValueLogMessage.of("try delete document failed",
+                    LOG.debug(KeyValueLogMessage.of("try delete document succeeded",
                             LuceneLogMessageKeys.GROUP, groupingKey,
                             LuceneLogMessageKeys.INDEX_PARTITION, partitionId,
                             LuceneLogMessageKeys.SEGMENT, documentIndexEntry.segmentName,
                             LuceneLogMessageKeys.DOC_ID, documentIndexEntry.docId,
                             LuceneLogMessageKeys.PRIMARY_KEY, primaryKey));
+                    return 1;
+                } else {
+                    LOG.info(KeyValueLogMessage.of("try delete document failed",
+                            LuceneLogMessageKeys.GROUP, groupingKey,
+                            LuceneLogMessageKeys.INDEX_PARTITION, partitionId,
+                            LuceneLogMessageKeys.SEGMENT, documentIndexEntry.segmentName,
+                            LuceneLogMessageKeys.DOC_ID, documentIndexEntry.docId,
+                            LuceneLogMessageKeys.PRIMARY_KEY, primaryKey,
+                            "files", Arrays.asList(directory.listAll()),
+                            "writerSegments", HackLucene.getSegmentInfo(indexWriter),
+                            "originalSegments", originalSegments,
+                            "pkeyIndex", Optional.ofNullable(directory.getPrimaryKeySegmentIndex()).map(LucenePrimaryKeySegmentIndex::readAllEntries),
+                            "reader", documentIndexEntry.directoryReader,
+                            "indexReader", documentIndexEntry.indexReader
+                            ));
                 }
-            } else if (LOG.isDebugEnabled()) {
-                LOG.debug(KeyValueLogMessage.of("primary key segment index entry not found",
+            } else {
+                LOG.info(KeyValueLogMessage.of("primary key segment index entry not found",
                         LuceneLogMessageKeys.GROUP, groupingKey,
                         LuceneLogMessageKeys.INDEX_PARTITION, partitionId,
                         LuceneLogMessageKeys.PRIMARY_KEY, primaryKey,
                         LuceneLogMessageKeys.SEGMENTS, segmentIndex.findSegments(primaryKey)));
             }
         }
+        LOG.info(KeyValueLogMessage.of("deleting by query",
+                LuceneLogMessageKeys.GROUP, groupingKey,
+                LuceneLogMessageKeys.INDEX_PARTITION, partitionId,
+                LuceneLogMessageKeys.PRIMARY_KEY, primaryKey,
+                "IndexOptions", this.state.index.getOptions(),
+                "DirIndexOptions", directory.getIndexOptions(),
+                "DirectoryPKey", directory.getBooleanIndexOption(LuceneIndexOptions.PRIMARY_KEY_SEGMENT_INDEX_ENABLED, false),
+                "DirectoryPKeyV2", directory.getBooleanIndexOption(LuceneIndexOptions.PRIMARY_KEY_SEGMENT_INDEX_V2_ENABLED, false)));
         Query query;
         // null format means don't use BinaryPoint for the index primary key
         if (keySerializer.hasFormat()) {
@@ -382,7 +413,15 @@ public class LuceneIndexMaintainer extends StandardIndexMaintainer {
         } else {
             // Use refresh to ensure the reader can see the latest deletes
             directoryReader = directoryManager.getWriterReader(groupingKey, partitionId, true);
-            return segmentIndex.findDocument(directoryReader, primaryKey);
+            final LucenePrimaryKeySegmentIndex.DocumentIndexEntry documentIndexEntry2 = segmentIndex.findDocument(directoryReader, primaryKey);
+            if (documentIndexEntry2 == null) {
+                LOG.info(KeyValueLogMessage.of("document still not found on refresh",
+                        LuceneLogMessageKeys.GROUP, groupingKey,
+                        LuceneLogMessageKeys.INDEX_PARTITION, partitionId,
+                        LuceneLogMessageKeys.PRIMARY_KEY, primaryKey,
+                        "reader", System.identityHashCode(directoryReader)));
+            }
+            return documentIndexEntry2;
         }
     }
 

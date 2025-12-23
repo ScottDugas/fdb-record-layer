@@ -86,14 +86,16 @@ public interface LucenePrimaryKeySegmentIndex {
         @Nonnull
         public final String segmentName;
         public final int docId;
+        public final DirectoryReader directoryReader;
 
         public DocumentIndexEntry(@Nonnull final Tuple primaryKey, @Nonnull final byte[] entryKey, @Nonnull final IndexReader indexReader,
-                                  @Nonnull String segmentName, final int docId) {
+                                  @Nonnull String segmentName, final int docId, final DirectoryReader directoryReader) {
             this.primaryKey = primaryKey;
             this.entryKey = entryKey;
             this.indexReader = indexReader;
             this.segmentName = segmentName;
             this.docId = docId;
+            this.directoryReader = directoryReader;
         }
     }
 }
