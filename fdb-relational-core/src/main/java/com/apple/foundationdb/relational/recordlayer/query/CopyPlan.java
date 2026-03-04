@@ -27,7 +27,6 @@ import com.apple.foundationdb.record.ScanProperties;
 import com.apple.foundationdb.record.provider.foundationdb.FDBRecordContext;
 import com.apple.foundationdb.record.provider.foundationdb.keyspace.DataInKeySpacePath;
 import com.apple.foundationdb.record.provider.foundationdb.keyspace.DataNotAtLeafException;
-import com.apple.foundationdb.record.provider.foundationdb.keyspace.KeySpace;
 import com.apple.foundationdb.record.provider.foundationdb.keyspace.KeySpacePath;
 import com.apple.foundationdb.record.provider.foundationdb.keyspace.KeySpacePathSerializer;
 import com.apple.foundationdb.record.provider.foundationdb.keyspace.NoSuchDirectoryException;
@@ -38,6 +37,7 @@ import com.apple.foundationdb.record.query.plan.cascades.typing.Type;
 import com.apple.foundationdb.relational.api.Options;
 import com.apple.foundationdb.relational.api.RelationalResultSet;
 import com.apple.foundationdb.relational.api.RelationalStructMetaData;
+import com.apple.foundationdb.relational.api.catalog.StoreCatalog;
 import com.apple.foundationdb.relational.api.exceptions.ErrorCode;
 import com.apple.foundationdb.relational.api.exceptions.InternalErrorException;
 import com.apple.foundationdb.relational.api.exceptions.RelationalException;
@@ -48,7 +48,6 @@ import com.apple.foundationdb.relational.recordlayer.ArrayRow;
 import com.apple.foundationdb.relational.recordlayer.ContinuationBuilder;
 import com.apple.foundationdb.relational.recordlayer.ContinuationImpl;
 import com.apple.foundationdb.relational.recordlayer.EmbeddedRelationalConnection;
-import com.apple.foundationdb.relational.recordlayer.KeySpaceUtils;
 import com.apple.foundationdb.relational.recordlayer.RecordContextTransaction;
 import com.apple.foundationdb.relational.recordlayer.RecordLayerIterator;
 import com.apple.foundationdb.relational.recordlayer.RecordLayerResultSet;
@@ -57,8 +56,8 @@ import com.google.common.base.Suppliers;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.util.Arrays;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -382,11 +381,11 @@ public final class CopyPlan extends QueryPlan {
 
     @Nonnull
     private KeySpacePath getPath(final ExecutionContext context) throws RelationalException, SQLException {
-        KeySpace keySpace = context.connection.unwrap(EmbeddedRelationalConnection.class).getBackingCatalog().getKeySpace();
+        final StoreCatalog storeCatalog = context.connection.unwrap(EmbeddedRelationalConnection.class).getBackingCatalog();
 
         KeySpacePath keySpacePath;
         try {
-            keySpacePath = KeySpaceUtils.toKeySpacePath(URI.create(path), keySpace);
+            keySpacePath = storeCatalog.getKeySpacePath(URI.create(path));
         } catch (RelationalException e) {
             throw new RelationalException("Invalid COPY path: " + path,
                     ErrorCode.INVALID_PATH, e);

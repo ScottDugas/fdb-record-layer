@@ -20,10 +20,10 @@
 
 package com.apple.foundationdb.relational.api.catalog;
 
-import com.apple.foundationdb.record.provider.foundationdb.keyspace.KeySpace;
+import com.apple.foundationdb.record.provider.foundationdb.keyspace.KeySpacePath;
 import com.apple.foundationdb.relational.api.Continuation;
-import com.apple.foundationdb.relational.api.Transaction;
 import com.apple.foundationdb.relational.api.RelationalResultSet;
+import com.apple.foundationdb.relational.api.Transaction;
 import com.apple.foundationdb.relational.api.exceptions.RelationalException;
 import com.apple.foundationdb.relational.api.metadata.Schema;
 
@@ -144,13 +144,11 @@ public interface StoreCatalog {
     boolean deleteDatabase(@Nonnull Transaction txn, @Nonnull URI dbUrl, boolean throwIfDoesNotExist) throws RelationalException;
 
     /**
-     * Return the {@link KeySpace} used for organizing data in the cluster.
-     * <p>
-     *     Note: This may be a superset of data managed by this catalog.
-     * </p>
-     * @return the {@link KeySpace} used for organizing data in the cluster
-     * @throws RelationalException if this catalog does not have a {@link KeySpace} associated
+     * Convert a given URI to a {@link KeySpacePath}.
+     * @param uri a uri pointing to a domain or schema
+     * @return the {@link KeySpacePath} that is associated with the given uri
+     * @throws RelationalException if the uri is not valid or cannot be associated with a path
      */
     @Nonnull
-    KeySpace getKeySpace() throws RelationalException;
+    KeySpacePath getKeySpacePath(@Nonnull URI uri) throws RelationalException;
 }
