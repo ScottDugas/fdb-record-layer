@@ -24,6 +24,7 @@ import com.apple.foundationdb.relational.api.ArrayMetaData;
 import com.apple.foundationdb.relational.api.RelationalResultSet;
 import com.apple.foundationdb.relational.api.RelationalResultSetMetaData;
 import com.apple.foundationdb.relational.api.StructMetaData;
+import com.apple.foundationdb.relational.yamltests.ArrayType;
 import com.apple.foundationdb.relational.yamltests.CustomYamlConstructor;
 import com.apple.foundationdb.relational.yamltests.YamlConnection;
 import com.apple.foundationdb.relational.yamltests.YamlExecutionContext;
@@ -267,7 +268,7 @@ public class CheckResultMetadataConfig extends QueryConfig {
             if (!expectedName.equalsIgnoreCase(actualCol.name)) {
                 return false;
             }
-            if (entry.getValue() instanceof Map) {
+            if (entry.getValue() instanceof Map) { // I think this branch can be removed
                 // array-of-struct: value is {"!array": [{field: type}, ...]}
                 final Map<?, ?> arrayMap = CustomYamlConstructor.LinedObject.unlineKeys((Map<?, ?>) entry.getValue());
                 final Map.Entry<?, ?> arrayEntry = arrayMap.entrySet().iterator().next();
@@ -290,6 +291,15 @@ public class CheckResultMetadataConfig extends QueryConfig {
                 }
                 @SuppressWarnings("unchecked")
                 final List<Map<?, ?>> valueList = (List<Map<?, ?>>) entry.getValue();
+                if (!matchesExpected(valueList, actualCol.fields)) {
+                    return false;
+                }
+            } else if (entry.getValue() instanceof ArrayType) {
+                if (actualCol.fields == null || !actualCol.isArray) {
+                    return false;
+                }
+                @SuppressWarnings("unchecked")
+                final List<Map<?, ?>> valueList = (List<Map<?, ?>>) ((ArrayType) entry.getValue()).getExpectedMetadata();
                 if (!matchesExpected(valueList, actualCol.fields)) {
                     return false;
                 }
