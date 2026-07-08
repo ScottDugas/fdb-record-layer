@@ -21,7 +21,6 @@ jobs:
   # time.
   # It's possible that we could change the nightly tests to just be the nightly tests, and not the regular tests in the future.
   test:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -51,7 +50,6 @@ jobs:
   ### Mixed mode
   # Get the versions of mixed-mode that we want to run
   get-mixed-mode-versions:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.versions.outputs.versions }}
@@ -70,7 +68,6 @@ jobs:
   # This runs them in parallel by version, which is unnecessary, because it's nightly and we don't care if it takes
   # 20 minutes or 2 hours, but this way we have the same config for PRB, nightly, and release
   mixed-mode:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     runs-on: ubuntu-latest
     continue-on-error: true
     needs: get-mixed-mode-versions
@@ -121,7 +118,6 @@ jobs:
 
   # Print out the mixed mode results to the summary
   mixed-mode-results:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     needs: [mixed-mode]
     runs-on: ubuntu-latest
     permissions:
@@ -145,7 +141,6 @@ jobs:
   #  3. nightly_coverage: Merges the JaCoCo output of 1 and 2, generates the report, and uploads
   #     it to teamscale under the 'Nightly Tests' partition.
   nightly_test:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     strategy:
       matrix:
         subproject: [fdb-extensions, fdb-record-layer-core, fdb-record-layer-lucene, yaml-tests]
@@ -182,7 +177,6 @@ jobs:
           retention-days: 1
 
   nightly_other_tests:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -221,7 +215,6 @@ jobs:
           retention-days: 1
 
   nightly_coverage:
-    if: github.repository == 'FoundationDB/fdb-record-layer'
     needs: [nightly_test, nightly_other_tests]
     runs-on: ubuntu-latest
     permissions:
